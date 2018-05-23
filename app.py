@@ -3,26 +3,33 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 import os
 
+from flask_cors import CORS
+
 app = Flask(__name__)
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'app.sqlite')
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
+CORS(app)
 
 class Course(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(50), unique=False)
     description = db.Column(db.Text, unique=False)
+    enrolled = db.Column(db.Boolean, unique=False)
+    open = db.Column(db.Boolean, unique=False)
 
-    def __init__(self, title, description):
+    def __init__(self, title, description, enrolled, open):
         self.title = title
         self.description = description
+        self.enrolled = enrolled
+        self.open = open
 
 
 class CourseSchema(ma.Schema):
     class Meta:
-        fields = ('title', 'description')
+        fields = ('title', 'description', 'enrolled', 'open')
 
 
 course_schema = CourseSchema()
@@ -33,8 +40,10 @@ courses_schema = CourseSchema(many=True)
 def add_course():
     title = request.json['title']
     description = request.json['description']
+    enrolled = False
+    open = False
 
-    new_course = Course(title, description)
+    new_course = Course(title, description, enrolled, open)
 
     db.session.add(new_course)
     db.session.commit()
@@ -66,9 +75,11 @@ def update_course(id):
     course = Course.query.get(id)
     title = request.json['title']
     description = request.json['description']
+    enrolled = False
 
     course.title = title
     course.description = description
+    course.enrolled = enrolled
 
     db.session.commit()
     return course_schema.jsonify(course)
